@@ -1,25 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import "../App.css";
-import type { FormProps } from "antd";
-import { Button, Space, Form, Input } from "antd";
-import { Checkbox } from "antd";
-import { useState, useEffect } from "react";
-import type { CheckboxProps } from "antd";
+import { Button, Checkbox, Form, Input, Space } from "antd";
+import React, { useEffect, useState } from "react";
 import { DeleteOutlined } from "@ant-design/icons";
+import type { CheckboxProps, FormProps } from "antd";
 
 export const Route = createFileRoute("/")({ component: App });
 
+const CheckboxGroup = Checkbox.Group;
+
 function App() {
   const [form] = Form.useForm();
-  const [todos, setTodos] = useState<string[]>([]);
+  const [todos, setTodos] = useState<Array<string>>([]);
+  const [checkedList, setCheckedList] = useState<Array<number>>([]);
+
+  const checkAll = todos.length > 0 && todos.length === checkedList.length;
+  const indeterminate =
+    checkedList.length > 0 && checkedList.length < todos.length;
 
   useEffect(() => {
     const storedTodos = localStorage.getItem("todos");
-    storedTodos ? setTodos(JSON.parse(storedTodos)) : [];
+    if (storedTodos) {
+      setTodos(JSON.parse(storedTodos));
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem("todos", JSON.stringify(todos));
+    setCheckedList([]);
   }, [todos]);
 
   const onFinish: FormProps["onFinish"] = (values) => {
@@ -27,17 +35,19 @@ function App() {
     form.resetFields();
   };
 
-  const onChange: CheckboxProps["onChange"] = (e) => {
-    console.log(`checked = ${e.target.checked}`);
+  const onChange = (list: Array<number>) => {
+    setCheckedList(list);
+  };
+
+  const onCheckAllChange: CheckboxProps["onChange"] = (e) => {
+    setCheckedList(e.target.checked ? [...todos.keys()] : []);
   };
 
   function del(index: number) {
     const storedTodos = localStorage.getItem("todos");
     if (storedTodos) {
       const val = JSON.parse(storedTodos);
-      console.log(val);
       val.splice(index, 1);
-      console.log(val);
       localStorage.setItem("todos", JSON.stringify(val));
       setTodos(val);
     }
@@ -60,13 +70,26 @@ function App() {
         </Form.Item>
       </Form>
 
-      <Space direction="vertical">
-        {todos.map((item, index) => (
-          <div key={index} className={`bg-white px-4 py-2 rounded`}>
-            <Checkbox onChange={onChange}>{item}</Checkbox>
-            <DeleteOutlined className="pl-3" onClick={() => del(index)} />
-          </div>
-        ))}
+      <Space orientation="vertical">
+        <Checkbox
+          indeterminate={indeterminate}
+          onChange={onCheckAllChange}
+          checked={checkAll}
+        >
+          Check all
+        </Checkbox>
+        <CheckboxGroup
+          value={checkedList}
+          onChange={onChange}
+          className="flex flex-col bg-white px-2 py-2 rounded min-w-65"
+        >
+          {todos.map((item, index) => (
+            <div key={index} className={`bg-white px-4 py-2 rounded`}>
+              <Checkbox value={index}>{item}</Checkbox>
+              <DeleteOutlined className="pl-3" onClick={() => del(index)} />
+            </div>
+          ))}
+        </CheckboxGroup>
       </Space>
     </div>
   );
